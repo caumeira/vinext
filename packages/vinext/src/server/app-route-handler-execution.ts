@@ -366,7 +366,7 @@ async function executeAppRouteHandlerImpl(
             };
           } catch (error) {
             if (
-              resolveAppRouteHandlerSpecialError(error, options.request.url, {
+              resolveAppRouteHandlerSpecialError(error, {
                 isAction: isPossibleAppRouteActionRequest(options.request),
               })
             ) {
@@ -614,7 +614,7 @@ async function executeAppRouteHandlerImpl(
     if (handlerDraftCookie != null) {
       markKnownDynamicAppRoute(options.routePattern);
     }
-    const specialError = resolveAppRouteHandlerSpecialError(error, options.request.url, {
+    const specialError = resolveAppRouteHandlerSpecialError(error, {
       isAction: isPossibleAppRouteActionRequest(options.request),
     });
     options.clearRequestContext();
