@@ -1450,6 +1450,7 @@ describe("createAppRscHandler", () => {
         ]) {
           const { props, options } = await dispatch(url);
           expect(props).toMatchObject({ kind: "hybrid-pages", sharedAcrossHosts: true });
+          expect(options.cacheIdentity!.regenerateFromDispatch).toBe(true);
           identities.push({
             props: options.cacheIdentity!.props,
             url: options.cacheIdentity!.request.url,
