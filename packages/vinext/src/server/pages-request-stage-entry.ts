@@ -59,6 +59,7 @@ import {
 import {
   adapterUsesSharedCacheIdentity,
   pagesCacheIdentityOrigin,
+  pagesPageSharesAcrossHosts,
 } from "./shared-cache-identity.js";
 import { getPagesResponseStageCacheDisposition } from "./pages-response-stage.js";
 import type {
@@ -531,7 +532,7 @@ async function handleRequestImpl(
         // one entry answers every host that is not a configured i18n domain.
         const sharedAcrossHosts =
           cache === "shared" &&
-          (matchedPage?.route.dataKind === "static" || matchedPage?.route.dataKind === "none") &&
+          pagesPageSharesAcrossHosts(matchedPage?.route) &&
           adapterUsesSharedCacheIdentity();
         const transportedPolicyHeaders = isSharedStaticPage
           ? withoutResponseStageVary(responseStagePolicyHeaders)

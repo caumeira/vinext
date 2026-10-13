@@ -175,6 +175,7 @@ import type { VinextCacheabilityProbeMode } from "./multi-stage.js";
 import {
   adapterUsesSharedCacheIdentity,
   pagesCacheIdentityOrigin,
+  pagesPageSharesAcrossHosts,
 } from "./shared-cache-identity.js";
 import { parseCacheabilityManifest, type CacheabilityManifest } from "./cacheability-manifest.js";
 import {
@@ -579,6 +580,7 @@ type RenderPagesFallbackOptions = {
     resourceKind: "api" | "page",
     dataKind?: PagesRouteDataKind,
     hasRequestAwareDocument?: boolean,
+    runsInitialProps?: boolean,
   ) => Promise<Response>;
   isDataRequest?: boolean;
   isRscRequest: boolean;
@@ -2207,6 +2209,7 @@ async function handleAppRscRequest<TRoute extends AppRscHandlerRoute>(
           resourceKind: "api" | "page",
           dataKind?: PagesRouteDataKind,
           hasRequestAwareDocument?: boolean,
+          runsInitialProps?: boolean,
         ) => {
           const pagesOnDemandRevalidate =
             resourceKind === "page" &&
@@ -2226,7 +2229,7 @@ async function handleAppRscRequest<TRoute extends AppRscHandlerRoute>(
           const sharedAcrossHosts =
             cache === "shared" &&
             resourceKind === "page" &&
-            (dataKind === "static" || dataKind === "none") &&
+            pagesPageSharesAcrossHosts({ dataKind, runsInitialProps }) &&
             adapterUsesSharedCacheIdentity();
           const hybridProps: HybridPagesWorkerResponseStageProps = {
             kind: "hybrid-pages",
