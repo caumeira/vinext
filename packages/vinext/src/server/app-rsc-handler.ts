@@ -173,6 +173,7 @@ import {
 } from "./app-worker-stages.js";
 import type { VinextCacheabilityProbeMode } from "./multi-stage.js";
 import {
+  adapterSharedCacheIdentity,
   adapterUsesSharedCacheIdentity,
   pagesCacheIdentityOrigin,
   pagesPageSharesAcrossHosts,
@@ -1347,6 +1348,7 @@ async function handleAppRscRequest<TRoute extends AppRscHandlerRoute>(
           // the render read of the query, so a page keeps the query in its
           // identity, as Next.js CDN caching does. Interception and mounted-slot
           // payloads stay contextual, as the RSC canonicalization above does.
+          // A host-free identity keeps the query of every dispatch.
           const cacheIdentity =
             cache !== "shared" ||
             stageProps.kind === "app-full-request" ||
@@ -1354,6 +1356,7 @@ async function handleAppRscRequest<TRoute extends AppRscHandlerRoute>(
             !adapterUsesSharedCacheIdentity()
               ? undefined
               : stageProps.kind === "app-page" &&
+                  adapterSharedCacheIdentity() === "query-free" &&
                   responseStagePolicy === null &&
                   stageProps.matchKind !== "interception" &&
                   stageProps.interceptionContext === null &&
