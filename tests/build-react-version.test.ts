@@ -9,7 +9,7 @@ import { testCacheDir } from "./helpers.js";
 
 const repoNodeModules = path.resolve(import.meta.dirname, "../node_modules");
 
-function createAppWithReact(version: string): string {
+function createAppWithReact(version: string, { declareRsdw = true } = {}): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "vinext-build-react-version-"));
   fs.writeFileSync(
     path.join(root, "package.json"),
@@ -18,6 +18,7 @@ function createAppWithReact(version: string): string {
       private: true,
       type: "module",
       packageManager: "npm@10.9.0",
+      ...(declareRsdw && { dependencies: { "react-server-dom-webpack": "^19.3.1" } }),
     }),
   );
   fs.mkdirSync(path.join(root, "app"));
@@ -84,5 +85,15 @@ describe("vinext build React version check", () => {
   it("accepts React at the floor", async () => {
     root = createAppWithReact("19.3.1");
     await expect(createAppBuilder(root)).resolves.toBeDefined();
+  });
+
+  it("requires an app RSDW while plugin-rsc bundles RSDW 19.3.0", async () => {
+    root = createAppWithReact("19.3.1", { declareRsdw: false });
+
+    await expect(createAppBuilder(root)).rejects.toThrow(
+      "vinext: App Router requires react, react-dom, and react-server-dom-webpack 19.3.1 or later.\n" +
+        "@vitejs/plugin-rsc 0.5.37 bundles an older react-server-dom-webpack, so add the latest to your package.json.\n" +
+        "Run: npm install react-server-dom-webpack@latest",
+    );
   });
 });

@@ -375,7 +375,7 @@ import {
   getViteCliInvocation,
   isViteCliConfigFile,
 } from "./utils/vite-cli-invocation.js";
-import { assertPluginRscVersion } from "./utils/plugin-rsc-version.js";
+import { assertPluginRscVersion, needsAppReactServerDom } from "./utils/plugin-rsc-version.js";
 import { getReactUpgradeDeps, reactUpgradeRequiredMessage } from "./utils/react-version.js";
 import {
   isPathInside,
@@ -2345,9 +2345,17 @@ export default function vinext(options: VinextOptions = {}): PluginOption[] {
       reactVersionChecked = true;
       // Never install during a build: fail with the command to run instead.
       const reactUpgrade = getReactUpgradeDeps(root);
+      const needsAppRsdw = rscVersion !== null && needsAppReactServerDom(root, rscVersion);
+      if (needsAppRsdw && !reactUpgrade.includes("react-server-dom-webpack@latest")) {
+        reactUpgrade.push("react-server-dom-webpack@latest");
+      }
       if (reactUpgrade.length === 0) return;
       throw new Error(
-        reactUpgradeRequiredMessage(detectPackageManager(root).replace(/ -D$/, ""), reactUpgrade),
+        reactUpgradeRequiredMessage(
+          detectPackageManager(root).replace(/ -D$/, ""),
+          reactUpgrade,
+          needsAppRsdw ? rscVersion : undefined,
+        ),
       );
     },
     shouldBuildPlainPages: () => !hasAppDir && !hasCloudflarePlugin && !hasNitroPlugin,

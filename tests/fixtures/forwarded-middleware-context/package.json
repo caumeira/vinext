@@ -1,5 +1,8 @@
 {
   "name": "vinext-forwarded-middleware-context-fixture",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "react-server-dom-webpack": "catalog:"
+  }
 }

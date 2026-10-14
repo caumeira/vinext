@@ -1,5 +1,8 @@
 {
   "name": "interception-proxy-locale-fixture",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "react-server-dom-webpack": "catalog:"
+  }
 }

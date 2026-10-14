@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "pathslash";
 import { findPackageVersion, isVersionBelow } from "./react-version.js";
 
 // 0.5.37 binds encrypted "use server" closures to their action id
@@ -16,4 +18,26 @@ export function assertPluginRscVersion(resolvedRscPath: string): string {
     );
   }
   return version;
+}
+
+// 0.5.37 and older bundle react-server-dom-webpack 19.3.0, below the React
+// floor. plugin-rsc uses the app's own copy instead only when the app's
+// package.json declares it.
+const FIRST_PLUGIN_RSC_WITH_SUPPORTED_RSDW: [number, number, number] = [0, 5, 38];
+
+/** Whether the app must declare its own react-server-dom-webpack. */
+export function needsAppReactServerDom(root: string, pluginRscVersion: string): boolean {
+  if (!isVersionBelow(pluginRscVersion, FIRST_PLUGIN_RSC_WITH_SUPPORTED_RSDW)) return false;
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8")) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    return (
+      !pkg.dependencies?.["react-server-dom-webpack"] &&
+      !pkg.devDependencies?.["react-server-dom-webpack"]
+    );
+  } catch {
+    return true;
+  }
 }

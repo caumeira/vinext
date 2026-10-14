@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "react-server-dom-webpack": "catalog:",
     "vinext": "workspace:*"
   }
 }

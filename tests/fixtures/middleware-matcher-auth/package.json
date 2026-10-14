@@ -1,5 +1,8 @@
 {
   "name": "vinext-middleware-matcher-auth-fixture",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "react-server-dom-webpack": "catalog:"
+  }
 }

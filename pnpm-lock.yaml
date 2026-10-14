@@ -547,6 +547,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.3.1(react@19.3.1)
+      react-server-dom-webpack:
+        specifier: 'catalog:'
+        version: 19.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       vinext:
         specifier: workspace:*
         version: link:../../packages/vinext
@@ -1403,6 +1406,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.3.1(react@19.3.1)
+      react-server-dom-webpack:
+        specifier: 'catalog:'
+        version: 19.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       require-in-the-middle:
         specifier: ^8
         version: 8.0.1
@@ -1444,7 +1450,11 @@ importers:
         specifier: 'catalog:'
         version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@20.19.43)(@vitest/coverage-istanbul@5.0.3(vitest@5.0.3))(@vitest/ui@5.0.3(vitest@5.0.3))(esbuild@0.28.1)(jiti@2.7.0)(msw@2.14.6(@types/node@20.19.43)(typescript@5.9.3))(playwright@1.60.0)(sass@1.100.0)(tsx@4.21.1)(typescript@5.9.3)(yaml@2.9.0)
 
-  tests/fixtures/app-action-ownership: {}
+  tests/fixtures/app-action-ownership:
+    dependencies:
+      react-server-dom-webpack:
+        specifier: 'catalog:'
+        version: 19.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
 
   tests/fixtures/app-basic:
     dependencies:
@@ -1530,10 +1540,17 @@ importers:
         specifier: 'catalog:'
         version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(@vitest/coverage-istanbul@5.0.3(vitest@5.0.3))(@vitest/ui@5.0.3(vitest@5.0.3))(esbuild@0.28.1)(jiti@2.7.0)(msw@2.14.6(@types/node@25.9.2)(typescript@7.0.2))(playwright@1.60.0)(sass@1.100.0)(tsx@4.21.1)(typescript@7.0.2)(yaml@2.9.0)
 
-  tests/fixtures/app-trailing-slash-isr: {}
+  tests/fixtures/app-trailing-slash-isr:
+    dependencies:
+      react-server-dom-webpack:
+        specifier: 'catalog:'
+        version: 19.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
 
   tests/fixtures/app-type-only-imports:
     dependencies:
+      react-server-dom-webpack:
+        specifier: 'catalog:'
+        version: 19.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       vinext:
         specifier: workspace:*
         version: link:../../../packages/vinext
@@ -1763,7 +1780,11 @@ importers:
         specifier: 'catalog:'
         version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(@vitest/coverage-istanbul@5.0.3(vitest@5.0.3))(@vitest/ui@5.0.3(vitest@5.0.3))(esbuild@0.28.1)(jiti@2.7.0)(msw@2.14.6(@types/node@25.9.2)(typescript@7.0.2))(playwright@1.60.0)(sass@1.100.0)(tsx@4.21.1)(typescript@7.0.2)(yaml@2.9.0)
 
-  tests/fixtures/css-url-assets-app: {}
+  tests/fixtures/css-url-assets-app:
+    dependencies:
+      react-server-dom-webpack:
+        specifier: 'catalog:'
+        version: 19.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
 
   tests/fixtures/css-url-assets-pages: {}
 
@@ -2067,7 +2088,11 @@ importers:
         specifier: 'catalog:'
         version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(@vitest/coverage-istanbul@5.0.3(vitest@5.0.3))(@vitest/ui@5.0.3(vitest@5.0.3))(esbuild@0.28.1)(jiti@2.7.0)(msw@2.14.6(@types/node@25.9.2)(typescript@7.0.2))(playwright@1.60.0)(sass@1.100.0)(tsx@4.21.1)(typescript@7.0.2)(yaml@2.9.0)
 
-  tests/fixtures/forwarded-middleware-context: {}
+  tests/fixtures/forwarded-middleware-context:
+    dependencies:
+      react-server-dom-webpack:
+        specifier: 'catalog:'
+        version: 19.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
 
   tests/fixtures/global-not-found-basic:
     dependencies:
@@ -2119,7 +2144,11 @@ importers:
         specifier: 'catalog:'
         version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(@vitest/coverage-istanbul@5.0.3(vitest@5.0.3))(@vitest/ui@5.0.3(vitest@5.0.3))(esbuild@0.28.1)(jiti@2.7.0)(msw@2.14.6(@types/node@25.9.2)(typescript@7.0.2))(playwright@1.60.0)(sass@1.100.0)(tsx@4.21.1)(typescript@7.0.2)(yaml@2.9.0)
 
-  tests/fixtures/hybrid-i18n-api-handoff: {}
+  tests/fixtures/hybrid-i18n-api-handoff:
+    dependencies:
+      react-server-dom-webpack:
+        specifier: 'catalog:'
+        version: 19.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
 
   tests/fixtures/init-css-modules:
     dependencies:
@@ -2155,13 +2184,25 @@ importers:
         specifier: 'catalog:'
         version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(@vitest/coverage-istanbul@5.0.3(vitest@5.0.3))(@vitest/ui@5.0.3(vitest@5.0.3))(esbuild@0.28.1)(jiti@2.7.0)(msw@2.14.6(@types/node@25.9.2)(typescript@7.0.2))(playwright@1.60.0)(sass@1.100.0)(tsx@4.21.1)(typescript@7.0.2)(yaml@2.9.0)
 
-  tests/fixtures/interception-proxy-locale: {}
+  tests/fixtures/interception-proxy-locale:
+    dependencies:
+      react-server-dom-webpack:
+        specifier: 'catalog:'
+        version: 19.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
 
-  tests/fixtures/interception-source-authz: {}
+  tests/fixtures/interception-source-authz:
+    dependencies:
+      react-server-dom-webpack:
+        specifier: 'catalog:'
+        version: 19.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
 
   tests/fixtures/linked-cjs-package: {}
 
-  tests/fixtures/middleware-matcher-auth: {}
+  tests/fixtures/middleware-matcher-auth:
+    dependencies:
+      react-server-dom-webpack:
+        specifier: 'catalog:'
+        version: 19.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
 
   tests/fixtures/module-federation-host:
     dependencies:
@@ -2222,7 +2263,11 @@ importers:
         specifier: 'catalog:'
         version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(@vitest/coverage-istanbul@5.0.3(vitest@5.0.3))(@vitest/ui@5.0.3(vitest@5.0.3))(esbuild@0.28.1)(jiti@2.7.0)(msw@2.14.6(@types/node@25.9.2)(typescript@7.0.2))(playwright@1.60.0)(sass@1.100.0)(tsx@4.21.1)(typescript@7.0.2)(yaml@2.9.0)
 
-  tests/fixtures/multi-stage-http: {}
+  tests/fixtures/multi-stage-http:
+    dependencies:
+      react-server-dom-webpack:
+        specifier: 'catalog:'
+        version: 19.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
 
   tests/fixtures/og-font-package: {}
 
@@ -2321,7 +2366,11 @@ importers:
         specifier: 'catalog:'
         version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(@vitest/coverage-istanbul@5.0.3(vitest@5.0.3))(@vitest/ui@5.0.3(vitest@5.0.3))(esbuild@0.28.1)(jiti@2.7.0)(msw@2.14.6(@types/node@25.9.2)(typescript@7.0.2))(playwright@1.60.0)(sass@1.100.0)(tsx@4.21.1)(typescript@7.0.2)(yaml@2.9.0)
 
-  tests/fixtures/root-layout-not-found-redirect: {}
+  tests/fixtures/root-layout-not-found-redirect:
+    dependencies:
+      react-server-dom-webpack:
+        specifier: 'catalog:'
+        version: 19.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
 
   tests/fixtures/root-layout-redirect:
     dependencies:
