@@ -71,6 +71,10 @@ export function getReactUpgradeDeps(
       minimumVersion: MINIMUM_REACT_VERSION,
       upgrades: ["react@latest", "react-dom@latest"],
     },
+    "react-dom": {
+      minimumVersion: MINIMUM_REACT_VERSION,
+      upgrades: ["react@latest", "react-dom@latest"],
+    },
   });
 }
 

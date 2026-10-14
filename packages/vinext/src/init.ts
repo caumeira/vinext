@@ -853,8 +853,9 @@ export async function init(options: InitOptions): Promise<InitResult> {
   // For App Router: react-server-dom-webpack requires react/react-dom versions
   // to match exactly (e.g. rsdw@19.3.1 needs react@^19.3.1). If the installed
   // React is too old (common with create-next-app), upgrade it first as a
-  // regular dependency to avoid ERESOLVE peer-dep conflicts.
-  if (isApp && (!shouldInstall || missingDependencies.includes("react-server-dom-webpack"))) {
+  // regular dependency to avoid ERESOLVE peer-dep conflicts. An already
+  // declared RSDW below the floor is upgraded here too.
+  if (isApp) {
     const reactUpgrade = getReactUpgradeDeps(root, { fromManifest: !shouldInstall });
     if (reactUpgrade.length > 0) {
       console.log(`  ${terminalStyle.cyan(terminalStyle.bold("Upgrading dependencies:"))}`);

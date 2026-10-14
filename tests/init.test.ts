@@ -667,6 +667,14 @@ describe("getReactUpgradeDeps", () => {
     expect(getReactUpgradeDeps(tmpDir)).toEqual([]);
   });
 
+  it("upgrades an installed React DOM below the floor", () => {
+    setupProject(tmpDir, { router: "app" });
+    setupFakeReact(tmpDir, "19.3.1");
+    setupFakePackage(tmpDir, "react-dom", "19.3.0");
+
+    expect(getReactUpgradeDeps(tmpDir)).toEqual(["react@latest", "react-dom@latest"]);
+  });
+
   it("returns upgrade deps when React major is below 19", () => {
     setupProject(tmpDir, { router: "app" });
     setupFakeReact(tmpDir, "18.3.1");
@@ -2347,6 +2355,31 @@ describe("init — dependency installation", () => {
     // No React upgrade call
     const reactUpgradeCall = execCalls.find((c) => c.cmd.includes("react@latest"));
     expect(reactUpgradeCall).toBeUndefined();
+  });
+
+  it("upgrades an already declared RSDW below the floor (App Router)", async () => {
+    setupProject(tmpDir, {
+      router: "app",
+      extraPkg: {
+        dependencies: {
+          react: "^19.3.1",
+          "react-dom": "^19.3.1",
+          "react-server-dom-webpack": "19.3.0",
+          next: "^15.0.0",
+        },
+      },
+    });
+    setupFakeReact(tmpDir, "19.3.1");
+    setupFakePackage(tmpDir, "react-dom", "19.3.1");
+    setupFakePackage(tmpDir, "react-server-dom-webpack", "19.3.0");
+
+    const { execCalls } = await runInit(tmpDir);
+
+    const upgradeCall = execCalls.find((c) => c.cmd.includes("react-server-dom-webpack@latest"));
+    expect(upgradeCall).toBeDefined();
+    expect(upgradeCall!.cmd).toContain("react@latest");
+    expect(upgradeCall!.cmd).toContain("react-dom@latest");
+    expect(upgradeCall!.cmd).not.toContain("-D");
   });
 
   function withUserAgent<T>(value: string | undefined, run: () => Promise<T>): Promise<T> {
