@@ -25,6 +25,12 @@ function getDependencyUpgradeDeps(
   return [];
 }
 
+/**
+ * Lowest React accepted for App Router builds. react-server-dom-webpack 19.3.0
+ * shares typed-array buffers across Flight chunks, fixed in 19.3.1.
+ */
+const MINIMUM_REACT_VERSION: [number, number, number] = [19, 3, 1];
+
 export function getReactUpgradeDeps(
   root: string,
   options: { fromManifest?: boolean } = {},
@@ -36,14 +42,14 @@ export function getReactUpgradeDeps(
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
     };
-    for (const name of ["react", "react-dom"]) {
+    for (const name of ["react", "react-dom", "react-server-dom-webpack"]) {
       const declared = pkg.dependencies?.[name] ?? pkg.devDependencies?.[name];
       const version = /^[~^]?([0-9]+(?:\.[0-9]+){0,2}(?:-[0-9A-Za-z.*-]+)?)(?:\.[x*])?$/.exec(
         declared ?? "",
       )?.[1];
       // Config-only init will install stable RSDW. A declared React canary must
       // move with it, even when its numeric version is above the stable floor.
-      if (version && (version.includes("-") || isVersionBelow(version, [19, 2, 6]))) {
+      if (version && (version.includes("-") || isVersionBelow(version, MINIMUM_REACT_VERSION))) {
         const upgrades = ["react@latest", "react-dom@latest"];
         const rsdw =
           pkg.dependencies?.["react-server-dom-webpack"] ??
@@ -55,8 +61,14 @@ export function getReactUpgradeDeps(
     return [];
   }
   return getDependencyUpgradeDeps(root, {
+    // An installed RSDW below the floor moves with React: RSDW pins its React
+    // peer to its own version.
+    "react-server-dom-webpack": {
+      minimumVersion: MINIMUM_REACT_VERSION,
+      upgrades: ["react@latest", "react-dom@latest", "react-server-dom-webpack@latest"],
+    },
     react: {
-      minimumVersion: [19, 2, 6],
+      minimumVersion: MINIMUM_REACT_VERSION,
       upgrades: ["react@latest", "react-dom@latest"],
     },
   });
