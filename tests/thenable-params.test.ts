@@ -147,6 +147,74 @@ describe("makeThenableParams", () => {
     expect(observedKeys).toEqual([["slug", "category"]]);
   });
 
+  // https://github.com/cloudflare/vinext/issues/3919
+  it("rejects instead of throwing when an observer rejects the access", async () => {
+    const accessError = new Error("dynamic API used");
+    const params = makeThenableParams(
+      { q: "a" },
+      {
+        observeParamAccess() {
+          throw accessError;
+        },
+      },
+    );
+
+    // React counts a pending chunk before calling then(), so the callbacks
+    // must settle rather than then() throwing.
+    let thenResult: Promise<unknown> | undefined;
+    const reason = await new Promise((resolve, reject) => {
+      thenResult = params.then(() => reject(new Error("resolved")), resolve);
+    });
+    expect(reason).toBe(accessError);
+    await expect(thenResult).resolves.toBeUndefined();
+    await expect(params).rejects.toBe(accessError);
+    await expect(params.catch((error: unknown) => error)).resolves.toBe(accessError);
+    await expect(params.finally(() => {})).rejects.toBe(accessError);
+  });
+
+  it("fails a promise method read when the observer rejects it", () => {
+    const accessError = new Error("dynamic API used");
+    const params = makeThenableParams(
+      { q: "a" },
+      {
+        observeParamAccess() {},
+        observePromiseMethodRead() {
+          throw accessError;
+        },
+      },
+    );
+
+    expect(() => Reflect.get(params, "then")).toThrow(accessError);
+    expect(() => Reflect.get(params, "catch")).toThrow(accessError);
+    expect(() => Reflect.get(params, "finally")).toThrow(accessError);
+    expect(Reflect.get(params, "q")).toBe("a");
+  });
+
+  it("does not report React's thenable state as param access", async () => {
+    let observed = 0;
+    const params = makeThenableParams(
+      { reason: "expired" },
+      {
+        observeParamAccess() {
+          observed += 1;
+          throw new Error("dynamic API used");
+        },
+      },
+    );
+
+    // React records a rejected thenable's state on the object itself and
+    // reads it back after counting a pending chunk.
+    const thenable = params as unknown as Record<string, unknown>;
+    const rejection = new Error("rejected");
+    thenable.status = "rejected";
+    thenable.reason = rejection;
+
+    expect(thenable.status).toBe("rejected");
+    expect(thenable.reason).toBe(rejection);
+    expect(observed).toBe(0);
+    await expect(params).rejects.toThrow("dynamic API used");
+  });
+
   it("reports destructured param property access to an observer", () => {
     const observedKeys: string[][] = [];
     const params = makeThenableParams(
