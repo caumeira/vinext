@@ -2382,6 +2382,49 @@ describe("init — dependency installation", () => {
     expect(upgradeCall!.cmd).not.toContain("-D");
   });
 
+  it("upgrades a declared RSDW pin below the floor before node_modules exists (App Router)", async () => {
+    setupProject(tmpDir, {
+      router: "app",
+      extraPkg: {
+        dependencies: {
+          react: "^19.3.1",
+          "react-dom": "^19.3.1",
+          "react-server-dom-webpack": "19.3.0",
+          next: "^15.0.0",
+        },
+      },
+    });
+
+    const { execCalls } = await runInit(tmpDir);
+
+    const upgradeCall = execCalls.find((c) => c.cmd.includes("react-server-dom-webpack@latest"));
+    expect(upgradeCall).toBeDefined();
+    expect(upgradeCall!.cmd).toContain("react@latest");
+    expect(upgradeCall!.cmd).toContain("react-dom@latest");
+  });
+
+  it("keeps a declared React canary above the floor when installing (App Router)", async () => {
+    const canary = "19.4.0-canary-a1b2c3d4-20261101";
+    setupProject(tmpDir, {
+      router: "app",
+      extraPkg: {
+        dependencies: {
+          react: canary,
+          "react-dom": canary,
+          "react-server-dom-webpack": canary,
+          next: "^15.0.0",
+        },
+      },
+    });
+    setupFakeReact(tmpDir, canary);
+    setupFakePackage(tmpDir, "react-dom", canary);
+    setupFakePackage(tmpDir, "react-server-dom-webpack", canary);
+
+    const { execCalls } = await runInit(tmpDir);
+
+    expect(execCalls.find((c) => c.cmd.includes("react@latest"))).toBeUndefined();
+  });
+
   function withUserAgent<T>(value: string | undefined, run: () => Promise<T>): Promise<T> {
     const previous = process.env.npm_config_user_agent;
     if (value === undefined) {

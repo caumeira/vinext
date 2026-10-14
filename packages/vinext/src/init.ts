@@ -854,9 +854,17 @@ export async function init(options: InitOptions): Promise<InitResult> {
   // to match exactly (e.g. rsdw@19.3.1 needs react@^19.3.1). If the installed
   // React is too old (common with create-next-app), upgrade it first as a
   // regular dependency to avoid ERESOLVE peer-dep conflicts. An already
-  // declared RSDW below the floor is upgraded here too.
+  // declared RSDW below the floor is upgraded here too. Installing also checks
+  // declared pins, which a clean install would resolve below the floor.
   if (isApp) {
-    const reactUpgrade = getReactUpgradeDeps(root, { fromManifest: !shouldInstall });
+    const reactUpgrade = shouldInstall
+      ? [
+          ...new Set([
+            ...getReactUpgradeDeps(root),
+            ...getReactUpgradeDeps(root, { fromManifest: true, installing: true }),
+          ]),
+        ]
+      : getReactUpgradeDeps(root, { fromManifest: true });
     if (reactUpgrade.length > 0) {
       console.log(`  ${terminalStyle.cyan(terminalStyle.bold("Upgrading dependencies:"))}`);
       console.log(

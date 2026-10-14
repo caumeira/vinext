@@ -33,7 +33,7 @@ const MINIMUM_REACT_VERSION: [number, number, number] = [19, 3, 1];
 
 export function getReactUpgradeDeps(
   root: string,
-  options: { fromManifest?: boolean } = {},
+  options: { fromManifest?: boolean; installing?: boolean } = {},
 ): string[] {
   if (options.fromManifest) {
     // Config-only init may have no node_modules. Compare the declared lower
@@ -44,12 +44,17 @@ export function getReactUpgradeDeps(
     };
     for (const name of ["react", "react-dom", "react-server-dom-webpack"]) {
       const declared = pkg.dependencies?.[name] ?? pkg.devDependencies?.[name];
-      const version = /^[~^]?([0-9]+(?:\.[0-9]+){0,2}(?:-[0-9A-Za-z.*-]+)?)(?:\.[x*])?$/.exec(
-        declared ?? "",
-      )?.[1];
+      // An installing init resolves ranges to their newest match, so only an
+      // exact pin can keep a version below the floor.
+      const pattern = options.installing
+        ? /^([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)$/
+        : /^[~^]?([0-9]+(?:\.[0-9]+){0,2}(?:-[0-9A-Za-z.*-]+)?)(?:\.[x*])?$/;
+      const version = pattern.exec(declared ?? "")?.[1];
       // Config-only init will install stable RSDW. A declared React canary must
       // move with it, even when its numeric version is above the stable floor.
-      if (version && (version.includes("-") || isVersionBelow(version, MINIMUM_REACT_VERSION))) {
+      // An installing init checks the resolved canary instead.
+      const canary = !options.installing && version?.includes("-");
+      if (version && (canary || isVersionBelow(version, MINIMUM_REACT_VERSION))) {
         const upgrades = ["react@latest", "react-dom@latest"];
         const rsdw =
           pkg.dependencies?.["react-server-dom-webpack"] ??
