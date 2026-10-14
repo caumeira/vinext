@@ -74,6 +74,13 @@ export function getReactUpgradeDeps(
   });
 }
 
+export function reactUpgradeRequiredMessage(installCommand: string, upgrades: string[]): string {
+  return (
+    `vinext: App Router requires react, react-dom, and react-server-dom-webpack ${MINIMUM_REACT_VERSION.join(".")} or later.\n` +
+    `Run: ${installCommand} ${upgrades.join(" ")}`
+  );
+}
+
 export function isVersionBelow(version: string, minimum: [number, number, number]): boolean {
   const current = version.split(".").map((part) => parseInt(part, 10));
   for (let index = 0; index < minimum.length; index++) {
