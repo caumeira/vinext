@@ -15,7 +15,6 @@
     "pg": "^8.13.1",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-server-dom-webpack": "catalog:",
     "require-in-the-middle": "^8",
     "vinext": "workspace:*",
     "vite": "catalog:",

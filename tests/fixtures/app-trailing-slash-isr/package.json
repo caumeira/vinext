@@ -1,8 +1,5 @@
 {
   "name": "app-trailing-slash-isr-fixture",
   "private": true,
-  "type": "module",
-  "dependencies": {
-    "react-server-dom-webpack": "catalog:"
-  }
+  "type": "module"
 }

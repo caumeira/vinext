@@ -1,8 +1,5 @@
 {
   "name": "fixture-css-url-assets-app",
   "private": true,
-  "type": "module",
-  "dependencies": {
-    "react-server-dom-webpack": "catalog:"
-  }
+  "type": "module"
 }

@@ -1,8 +1,5 @@
 {
   "name": "@vinext/e2e-client-module-with-package-type-cloudflare",
   "private": true,
-  "type": "module",
-  "dependencies": {
-    "react-server-dom-webpack": "^19.3.1"
-  }
+  "type": "module"
 }

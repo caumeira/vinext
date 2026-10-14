@@ -1,8 +1,5 @@
 {
   "name": "cloudflare-static-export-e2e",
   "private": true,
-  "type": "module",
-  "dependencies": {
-    "react-server-dom-webpack": "^19.3.1"
-  }
+  "type": "module"
 }
