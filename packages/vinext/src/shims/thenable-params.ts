@@ -19,11 +19,11 @@ export type ThenableParams<T extends Record<string, unknown>> = Promise<T> &
 export type ThenableParamsObserver = Readonly<{
   observeParamAccess: (keys: readonly string[]) => void;
   /**
-   * Runs when `then`, `catch` or `finally` is read. Throwing here fails the
-   * read itself before React counts any pending work, as Next.js fails a read
-   * of `then` (its `catch` and `finally` read `then` when called).
+   * Runs when `then` is read, and when `catch` or `finally` is called (they
+   * read `then` on a native promise). Throwing here fails the read itself
+   * before React counts any pending work, as Next.js does.
    */
-  observePromiseMethodRead?: () => void;
+  observeThenRead?: () => void;
   observeReactPromiseStatus?: boolean;
 }>;
 
@@ -250,10 +250,11 @@ function createThenableParams<T extends Record<string, unknown>>(
   const handler: ProxyHandler<Promise<T>> = {
     get(target, prop, receiver) {
       if (isPromiseContinuation(prop)) {
-        observer?.observePromiseMethodRead?.();
+        if (prop === "then") observer?.observeThenRead?.();
         const value = Reflect.get(target, prop, receiver);
         if (typeof value !== "function") return value;
         return (...args: unknown[]) => {
+          if (prop !== "then") observer?.observeThenRead?.();
           // Only observe all keys when NOT in fallback-shell mode.
           // In fallback-shell mode, let the resolved params proxy report
           // actual property access lazily.

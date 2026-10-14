@@ -35,7 +35,7 @@ export function createAppPageSearchParamsObserver(): ThenableParamsObserver {
     },
     // Like Next.js, dynamic = "error" fails a read of `searchParams.then`, so
     // passing searchParams to a client component fails the render.
-    observePromiseMethodRead: throwIfStaticGenerationAccessError,
+    observeThenRead: throwIfStaticGenerationAccessError,
   };
 }
 

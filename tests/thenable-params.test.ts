@@ -172,21 +172,24 @@ describe("makeThenableParams", () => {
     await expect(params.finally(() => {})).rejects.toBe(accessError);
   });
 
-  it("fails a promise method read when the observer rejects it", () => {
+  it("fails a read of then when the observer rejects it, like Next.js", () => {
     const accessError = new Error("dynamic API used");
     const params = makeThenableParams(
       { q: "a" },
       {
         observeParamAccess() {},
-        observePromiseMethodRead() {
+        observeThenRead() {
           throw accessError;
         },
       },
     );
 
     expect(() => Reflect.get(params, "then")).toThrow(accessError);
-    expect(() => Reflect.get(params, "catch")).toThrow(accessError);
-    expect(() => Reflect.get(params, "finally")).toThrow(accessError);
+    // catch and finally read then only when called, as on a native promise.
+    expect(Reflect.get(params, "catch")).toBeTypeOf("function");
+    expect(Reflect.get(params, "finally")).toBeTypeOf("function");
+    expect(() => params.catch(() => {})).toThrow(accessError);
+    expect(() => params.finally(() => {})).toThrow(accessError);
     expect(Reflect.get(params, "q")).toBe("a");
   });
 
