@@ -63,6 +63,7 @@ import {
   CACHEABILITY_REQUEST_PROJECTION_MODULE,
 } from "./server/cacheability-manifest.js";
 import { PREGENERATED_CONCRETE_PATHS_MODULE } from "./server/pregenerated-concrete-paths.js";
+import { rewriteOutputRootExternals } from "./build/output-root-externals.js";
 
 import { installSocketErrorBackstop } from "./server/socket-error-backstop.js";
 import { shouldInvalidateAppRouteFile } from "./server/dev-route-files.js";
@@ -241,13 +242,13 @@ import {
 } from "./client/instrumentation-client-inject.js";
 import { createMiddlewareServerOnlyPlugin } from "./plugins/middleware-server-only.js";
 import { createPagesNodeExternalsPlugin } from "./plugins/pages-node-externals.js";
+import { createCloudflareDevModuleUrlsPlugin } from "./plugins/cloudflare-dev-module-urls.js";
 import { validateMiddlewareModuleExports } from "./plugins/middleware-export-validation.js";
 import { createOptimizeImportsPlugin } from "./plugins/optimize-imports.js";
 import { createDynamicPreloadMetadataPlugin } from "./plugins/dynamic-preload-metadata.js";
 import { createOgInlineFetchAssetsPlugin, createOgAssetsPlugin } from "./plugins/og-assets.js";
 import { createOgHarfbuzzPlugin } from "./plugins/og-harfbuzz.js";
 import { createUseCacheCallablePlugin } from "./plugins/use-cache-callable.js";
-import { cacheFlightCodecPlugin } from "./plugins/cache-flight-codec.js";
 import { generateRouteTypes } from "./typegen.js";
 import {
   mergeOptimizeDepsExclude,
@@ -365,7 +366,6 @@ import MagicString from "magic-string";
 import path, { toSlash } from "pathslash";
 import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
 import { getPagesPreviewModeId } from "./server/pages-preview.js";
@@ -379,8 +379,8 @@ import {
   getViteCliInvocation,
   isViteCliConfigFile,
 } from "./utils/vite-cli-invocation.js";
-import { assertPluginRscVersion } from "./utils/plugin-rsc-version.js";
-import { getReactUpgradeDeps } from "./utils/react-version.js";
+import { assertPluginRscVersion, needsAppReactServerDom } from "./utils/plugin-rsc-version.js";
+import { getReactUpgradeDeps, reactUpgradeRequiredMessage } from "./utils/react-version.js";
 import {
   isPathInside,
   isPathInsideOrEqual,
@@ -410,6 +410,16 @@ const PAGES_CLOUDFLARE_WORKER_OPTIMIZE_DEPS_INCLUDE = Object.freeze([
   "react-dom/server.edge",
   "react/jsx-runtime",
   "react/jsx-dev-runtime",
+]);
+
+// vinext's cache runtime lazily imports plugin-rsc's React serializer. The
+// Worker scan never crawls vinext's own server modules, so without this the
+// optimizer discovers it while the Worker entry is loading and rewrites the
+// deps directory mid-import. Nested through vinext because plugin-rsc is an
+// optional peer that apps need not depend on directly.
+const PAGES_CLOUDFLARE_WORKER_OPTIONAL_OPTIMIZE_DEPS_INCLUDE = Object.freeze([
+  "use-sync-external-store/with-selector",
+  "vinext > @vitejs/plugin-rsc/react/rsc",
 ]);
 
 // In dev, @vitejs/plugin-rsc can serve "use client" modules nested inside a
@@ -841,7 +851,11 @@ function createDevPagesModuleDependencyReader(root: string, resolve: ResolveFrom
       record,
       parserLanguageForScript(cleanModulePath),
     )) {
-      const resolved = await resolve(specifier, cleanModulePath, { skipSelf: true });
+      // The reader runs inside vinext:config's load hook. Keep vinext's own
+      // resolveId in the chain so shimmed specifiers such as next/navigation
+      // resolve to the shim instead of real Next.js, which the Worker dep
+      // optimizer would otherwise discover and re-bundle during startup.
+      const resolved = await resolve(specifier, cleanModulePath, { skipSelf: false });
       if (!resolved?.id) continue;
 
       if (isStylesheetSpecifier(specifier) || isStylesheetSpecifier(resolved.id)) {
@@ -1313,6 +1327,13 @@ const RESOLVED_CACHEABILITY_REQUEST_PROJECTION =
   VIRTUAL_PREFIX + VIRTUAL_CACHEABILITY_REQUEST_PROJECTION;
 const VIRTUAL_PREGENERATED_CONCRETE_PATHS = "virtual:vinext-pregenerated-concrete-paths";
 const RESOLVED_PREGENERATED_CONCRETE_PATHS = VIRTUAL_PREFIX + VIRTUAL_PREGENERATED_CONCRETE_PATHS;
+// Worker builds keep these virtual ids external; renderChunk points each import
+// at the module vinext emits (and deploy steps fill) at the output root.
+const OUTPUT_ROOT_SERVER_EXTERNALS: ReadonlyMap<string, string> = new Map([
+  [VIRTUAL_CACHEABILITY_MANIFEST, CACHEABILITY_MANIFEST_MODULE],
+  [VIRTUAL_CACHEABILITY_REQUEST_PROJECTION, CACHEABILITY_REQUEST_PROJECTION_MODULE],
+  [VIRTUAL_PREGENERATED_CONCRETE_PATHS, PREGENERATED_CONCRETE_PATHS_MODULE],
+]);
 const VIRTUAL_APP_REQUEST_ENTRY = "virtual:vinext-app-request-entry";
 const RESOLVED_APP_REQUEST_ENTRY = VIRTUAL_PREFIX + VIRTUAL_APP_REQUEST_ENTRY;
 const VIRTUAL_APP_RESPONSE_ENTRY = "virtual:vinext-app-response-entry";
@@ -1752,7 +1773,7 @@ export default function vinext(options: VinextOptions = {}): PluginOption[] {
   let hasPlainPagesBuildEnvironments = false;
   let originalPlainPagesEnvironments: UserConfig["environments"] | undefined;
   let buildLifecycleInvocation: BuildLifecycleInvocation | undefined;
-  let reactUpgradeChecked = false;
+  let reactVersionChecked = false;
   let pagesOptimizeEntries: string[] = [];
   const importMetaUrlCapability = createImportMetaUrlPlugin({
     getRoot: () => root,
@@ -1768,6 +1789,8 @@ export default function vinext(options: VinextOptions = {}): PluginOption[] {
     },
   });
   const pagesClientAssetsOutputDirs = new Set<string>();
+  // Output-root-relative path of each build environment's client assets module.
+  const pagesClientAssetsExternalTargets = new Map<string, ReadonlyMap<string, string>>();
   // Workers must keep this module inside their deployable output directory.
   const resolvePagesClientAssetsOutputDir = (environmentName: string, outputDir: string): string =>
     !selectedMultiStageOutput && !hasAppDir && !hasCloudflarePlugin && environmentName === "ssr"
@@ -2012,7 +2035,7 @@ export default function vinext(options: VinextOptions = {}): PluginOption[] {
         if (useServerIndex === -1) {
           throw new Error("vinext: Failed to locate @vitejs/plugin-rsc use-server plugin.");
         }
-        plugins.splice(useServerIndex, 0, cacheFlightCodecPlugin(), useCachePlugin);
+        plugins.splice(useServerIndex, 0, useCachePlugin);
         return plugins.map(scopeRscPlugin);
       })
       .catch((cause) => {
@@ -2347,18 +2370,24 @@ export default function vinext(options: VinextOptions = {}): PluginOption[] {
           !config.build?.ssr &&
           getBuildBundlerOptions(config.build)?.input === undefined)),
     onPrepare: () => {
-      if (!hasAppDir || reactUpgradeChecked) return;
-      reactUpgradeChecked = true;
+      if (!hasAppDir || reactVersionChecked) return;
+      reactVersionChecked = true;
+      // Never install during a build: fail with the command to run instead.
       const reactUpgrade = getReactUpgradeDeps(root);
+      // plugin-rsc looks for the app's RSDW from the working directory, not
+      // the Vite root.
+      const needsAppRsdw = rscVersion !== null && needsAppReactServerDom(process.cwd(), rscVersion);
+      if (needsAppRsdw && !reactUpgrade.includes("react-server-dom-webpack@latest")) {
+        reactUpgrade.push("react-server-dom-webpack@latest");
+      }
       if (reactUpgrade.length === 0) return;
-      const installCommand = detectPackageManager(root).replace(/ -D$/, "");
-      const [packageManager, ...packageManagerArgs] = installCommand.split(" ");
-      console.log("  Upgrading React for RSC compatibility...");
-      execFileSync(packageManager, [...packageManagerArgs, ...reactUpgrade], {
-        cwd: root,
-        stdio: "inherit",
-        shell: process.platform === "win32",
-      });
+      throw new Error(
+        reactUpgradeRequiredMessage(
+          detectPackageManager(root).replace(/ -D$/, ""),
+          reactUpgrade,
+          needsAppRsdw ? rscVersion : undefined,
+        ),
+      );
     },
     shouldBuildPlainPages: () => !hasAppDir && !hasCloudflarePlugin && !hasNitroPlugin,
     createContext: () => ({
@@ -4427,13 +4456,15 @@ export default function vinext(options: VinextOptions = {}): PluginOption[] {
                 ? APP_CLIENT_OPTIONAL_OPTIMIZE_DEPS_INCLUDE
                 : []
               : name !== "client"
-                ? ["use-sync-external-store/with-selector"]
+                ? PAGES_CLOUDFLARE_WORKER_OPTIONAL_OPTIMIZE_DEPS_INCLUDE
                 : [];
             for (const id of optionalIncludes) {
+              const depId = id.slice(id.lastIndexOf(">") + 1).trim();
               if (
                 optimizer.include?.includes(id) ||
+                optimizer.include?.includes(depId) ||
                 optimizer.exclude?.some(
-                  (excluded) => id === excluded || id.startsWith(`${excluded}/`),
+                  (excluded) => depId === excluded || depId.startsWith(`${excluded}/`),
                 )
               ) {
                 continue;
@@ -4762,7 +4793,7 @@ export default function vinext(options: VinextOptions = {}): PluginOption[] {
               ? this.environment?.name === "rsc"
               : this.environment !== undefined && isServerEnvironment(this.environment);
             if (isWorkerBuildEnvironment && this.environment.config?.command === "build") {
-              return { id: `./${CACHEABILITY_MANIFEST_MODULE}`, external: true };
+              return { id: VIRTUAL_CACHEABILITY_MANIFEST, external: true };
             }
             return RESOLVED_CACHEABILITY_MANIFEST;
           }
@@ -4772,7 +4803,7 @@ export default function vinext(options: VinextOptions = {}): PluginOption[] {
               this.environment?.name === "rsc" &&
               this.environment.config?.command === "build"
             ) {
-              return { id: `./${CACHEABILITY_REQUEST_PROJECTION_MODULE}`, external: true };
+              return { id: VIRTUAL_CACHEABILITY_REQUEST_PROJECTION, external: true };
             }
             return RESOLVED_CACHEABILITY_REQUEST_PROJECTION;
           }
@@ -4781,7 +4812,7 @@ export default function vinext(options: VinextOptions = {}): PluginOption[] {
               ? this.environment?.name === "rsc"
               : this.environment !== undefined && isServerEnvironment(this.environment);
             if (isWorkerBuildEnvironment && this.environment.config?.command === "build") {
-              return { id: `./${PREGENERATED_CONCRETE_PATHS_MODULE}`, external: true };
+              return { id: VIRTUAL_PREGENERATED_CONCRETE_PATHS, external: true };
             }
             return RESOLVED_PREGENERATED_CONCRETE_PATHS;
           }
@@ -5275,14 +5306,24 @@ export const loadServerActionClient = ${
             this.environment.name,
             environmentOutDir,
           );
-          let externalId = path.relative(
-            environmentOutDir,
-            path.join(sidecarDir, PAGES_CLIENT_ASSETS_MODULE),
+          pagesClientAssetsExternalTargets.set(
+            this.environment.name,
+            new Map([
+              [
+                VIRTUAL_PAGES_CLIENT_ASSETS,
+                path.relative(environmentOutDir, path.join(sidecarDir, PAGES_CLIENT_ASSETS_MODULE)),
+              ],
+            ]),
           );
-          if (!externalId.startsWith(".")) externalId = `./${externalId}`;
           pagesClientAssetsOutputDirs.add(sidecarDir);
-          return { id: externalId, external: true };
+          return { id: VIRTUAL_PAGES_CLIENT_ASSETS, external: true };
         },
+      },
+
+      renderChunk(code, chunk) {
+        const targets = pagesClientAssetsExternalTargets.get(this.environment.name);
+        if (!targets) return null;
+        return rewriteOutputRootExternals(code, chunk.fileName, targets);
       },
 
       outputOptions(output) {
@@ -5485,6 +5526,10 @@ export const loadServerActionClient = ${
     {
       name: "vinext:cacheability-manifest-asset",
       apply: "build",
+
+      renderChunk(code, chunk) {
+        return rewriteOutputRootExternals(code, chunk.fileName, OUTPUT_ROOT_SERVER_EXTERNALS);
+      },
 
       generateBundle() {
         const isWorkerBuildEnvironment = hasAppDir
@@ -5742,9 +5787,7 @@ export const loadServerActionClient = ${
           }
           const address = server.httpServer?.address();
           const port =
-            typeof address === "object" && address
-              ? address.port
-              : (server.config.server.port ?? 3000);
+            typeof address === "object" && address ? address.port : server.config.server.port;
           return `http://localhost:${port}`;
         };
         // Reuse the Pages SSR handler across requests. Every createSSRHandler
@@ -8656,7 +8699,7 @@ export const loadServerActionClient = ${
     plugins.push(createRscReferenceValidationNormalizerPlugin());
     plugins.push(createRscClientReferenceLoadersPlugin());
   } else if (manualUseCachePluginPromise) {
-    plugins.push(cacheFlightCodecPlugin(), manualUseCachePluginPromise);
+    plugins.push(manualUseCachePluginPromise);
   }
   plugins.push({
     name: "vinext:plain-pages-build-config",
@@ -8689,6 +8732,7 @@ export const loadServerActionClient = ${
       },
     },
   });
+  plugins.push(createCloudflareDevModuleUrlsPlugin({ isEnabled: () => hasCloudflarePlugin }));
   plugins.push(buildLifecyclePlugins[1]);
 
   return plugins;
