@@ -1129,11 +1129,18 @@ describe("App Router Production server (startProdServer)", () => {
     // leaves a `<!-- -->` separator in their place, which Next.js doesn't emit.
     expect(html).toMatch(/<div>Index<p id="dynamic-use-id">/);
     // The component's script preload is still rendered (and hoisted).
+    const clientManifest = JSON.parse(
+      fs.readFileSync(path.join(outDir, "client", ".vite", "manifest.json"), "utf8"),
+    ) as Record<string, { file: string }>;
+    const useIdEntry = Object.entries(clientManifest).find(([key]) =>
+      key.endsWith("/use-id-field.tsx"),
+    )?.[1];
+    expect(useIdEntry).toBeDefined();
     const dynamicScriptPreloads = (html.match(/<link\b[^>]*>/g) ?? []).filter(
       (tag) =>
         /\brel="modulepreload"/.test(tag) &&
         /\bfetchpriority="low"/i.test(tag) &&
-        /use-id-field[^"]*\.js"/.test(tag),
+        tag.includes(`href="/${useIdEntry!.file}"`),
     );
     expect(dynamicScriptPreloads).toHaveLength(1);
   });

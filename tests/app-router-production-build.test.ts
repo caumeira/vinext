@@ -736,7 +736,8 @@ export default async function OpenGraphImage() {
       // The App browser entry should also be under the assetPrefix path
       const appEntryPath = clientEntryManifest.appBrowserEntry;
       expect(appEntryPath.startsWith("cdn/_next/static/")).toBe(true);
-      expect(appEntryPath).toContain("index-");
+      expect(appEntryPath).toMatch(/\/chunks\/chunk-[\w-]+\.js$/);
+      expect(fs.existsSync(path.join(clientDir, appEntryPath))).toBe(true);
 
       // Import the RSC handler and verify the baked constants
       const rscEntryPath = path.join(tmpDir, "dist", "server", "index.js");
