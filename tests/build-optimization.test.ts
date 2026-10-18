@@ -2059,8 +2059,10 @@ describe("treeshake config integration", () => {
       // output config should include the min chunk size setting.
       const output = getBuildBundlerOptions(result).output;
       expect(output).toBeDefined();
-      expect(output.entryFileNames).toBe("_next/static/chunks/[name]-[hash].js");
-      expect(output.chunkFileNames).toBe("_next/static/chunks/[name]-[hash].js");
+      expect(output.entryFileNames({ name: "index" })).toBe("_next/static/chunks/chunk-[hash].js");
+      expect(output.chunkFileNames({ name: "consent-banner" })).toBe(
+        "_next/static/chunks/chunk-[hash].js",
+      );
       if (output.codeSplitting) {
         expect(output.codeSplitting.minSize).toBe(10_000);
       } else {

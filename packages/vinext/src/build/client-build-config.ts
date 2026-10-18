@@ -175,9 +175,23 @@ export function createClientManualChunks(shimsDir: string, preserveRouteBoundari
 
 export function createClientFileNameConfig(assetsDir: string) {
   const chunksDir = `${assetsDir}/chunks`;
+  const runtimeNames = new Set([
+    "framework",
+    "vinext",
+    "vinext-client-entry",
+    "vinext-app-browser-entry",
+    "_virtual_vinext-client-entry",
+    "_virtual_vinext-app-browser-entry",
+  ]);
+  function fileName({ name }: { name: string }): string {
+    // Cookie-notice filters match URLs such as `/consent-banner-`, so exposing
+    // application module names can block a required chunk and break hydration.
+    // Keep the runtime names used by Pages Router shared-chunk discovery.
+    return `${chunksDir}/${runtimeNames.has(name) ? name : "chunk"}-[hash].js`;
+  }
   return {
-    entryFileNames: `${chunksDir}/[name]-[hash].js`,
-    chunkFileNames: `${chunksDir}/[name]-[hash].js`,
+    entryFileNames: fileName,
+    chunkFileNames: fileName,
   };
 }
 
